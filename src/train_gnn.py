@@ -16,6 +16,7 @@ from models import CNN
 from models import GNN
 from voxDataset import trainData
 from voxDataset import testData
+import scipy.io
 
 IntType = np.int64
 
@@ -67,10 +68,10 @@ def main():
     device = 'cpu'
 
     # Set hyperparameters
-    batch_dim = 256
-    lr = 0.001
+    batch_dim = 600
+    lr = 0.05
     GNN_epochs = 100
-    CNN_epochs = 30
+    CNN_epochs = 2
     latent_dim = 64
 
     # Load data
@@ -82,6 +83,16 @@ def main():
     testDataSet = testData()
     testLoader = DataLoader(dataset=testDataSet,
                             batch_size=batch_dim, shuffle=True, num_workers=0)
+
+
+    #Semantic Embeddings
+    set_idx = np.int16([1, 2, 8, 12, 14, 22, 23, 30, 33, 35])
+    glovevector = scipy.io.loadmat('../data/ModelNet40_glove')
+    glove_set = glovevector['word']
+    glove = glove_set[set_idx, :] #Is a 10 x 300 ndarray
+    #print(type(glove))
+    #print(glove)
+    #print(glove.shape)
 
     # We must first use a pre-trained CNN to obtain data to be used for the GCN and semantic embeddings.
     # The paper we are referencing supports the use of 'res50' or 'inception' networks. However, these are for 2d images.
@@ -99,6 +110,7 @@ def main():
     # Define Loss Function
     loss_func = nn.CrossEntropyLoss()
     #loss_func = nn.BCELoss()
+    loss_glove = nn.MSELoss()
 
     # Optimizer
     optim = Adam(voxCNN.parameters(), lr=lr)
@@ -112,37 +124,52 @@ def main():
     epochVals = []
     lossVals = []
 
+    print("BEGIN TRAINING")
+
     for epoch in range(CNN_epochs):
         for num_batch, (x_batch, labels) in enumerate(trainLoader):
 
             # x_batch is of dim batch_size, x, y, z
             # labels is of dim batch_size
             # unsqueeze to make it batch_size, numchannels, x, y, z
+
+            #print(labels.shape) #glovedata is of shape batchsize x 300
+
             x_batch = torch.unsqueeze(x_batch, 1)
-
             x_batch, labels = x_batch.to(device), labels.to(device)
-
             x_batch = x_batch.float()
             # labels = one_hot_encoding(labels)
-            # labels = labels.float()
+            #labels = labels.long()
 
-            # print(x_batch.shape)
-            # print(labels.shape)
+            #print(x_batch.shape)
+            #print(labels.shape)
+
 
             # should return a (batch_size, ) tensor to compare w/ labels
             CNN_pred = voxCNN(x_batch)
 
-            # print(CNN_pred.shape)
-            # print(labels.shape)
+            #print(CNN_pred.shape)
+            #print(labels.shape)
 
-            loss = loss_func(CNN_pred, labels)
+            #print(labels)
 
+            #print(CNN_pred.dtype)
+            #print(labels.dtype)
+            #print(CNN_pred[0])
+
+            #loss = loss_func(CNN_pred, labels)
+
+            labels = labels.float()
+
+            loss = loss_glove(CNN_pred, labels)
+
+            #print(loss)
             optim.zero_grad()
             loss.backward()
             optim.step()
             # break
 
-            # print(num_batch)
+            print("Batch ",num_batch)
             if (num_batch + 1) % 16 == 0:
                 # print(CNN_pred)
                 print("Epoch: [{}/{}], Batch: {}, Loss: {}".format(epoch +
@@ -150,6 +177,8 @@ def main():
         epochVals = epochVals + [epoch]
         lossVals = lossVals + [loss]
         # break
+
+    print("FINISH TRAINING")
 
     plt.figure()
     for i in range(len(epochVals)):
@@ -160,11 +189,51 @@ def main():
 
     # Test the Model
 
+    # test_error = 0
+    # voxCNN.eval()
+
+    # x_pred = torch.empty(batch_dim)
+    # y_labels = torch.empty(batch_dim)
+
+    # with torch.no_grad():
+    #     total = 0
+    #     correct = 0
+    #     for n_batch, (x_batch, labels) in enumerate(testLoader):
+    #         x_batch, labels = x_batch.to(device), labels.to(device)
+    #         x_batch = torch.unsqueeze(x_batch, 1)
+
+    #         x_batch = x_batch.float()
+    #         labels = labels.float() #Comment out when not using glove
+
+    #         pred = voxCNN(x_batch)
+    #         _, predicted = torch.max(pred.data, 1)
+
+    #         total += labels.size(0)
+    #         correct += (predicted == labels).sum().item()
+
+    #         x_pred = torch.cat((x_pred, predicted.float()), 0)
+    #         y_labels = torch.cat((y_labels, labels.float()), 0)
+
+    #         # print(n_batch)
+
+    #         test_error += loss_func(pred, labels).item()
+    #         # break
+
+    # print("Test Error:", test_error)
+    # print("Test Accuracy: {} %".format(100 * correct / total))
+
+    #Test model with Glove Data
+
+    print("BEGIN TESTING")
+
     test_error = 0
     voxCNN.eval()
 
+    batch_pred = torch.empty(batch_dim)
     x_pred = torch.empty(batch_dim)
     y_labels = torch.empty(batch_dim)
+
+    glove = torch.from_numpy(voxCNN.get_glove_set())
 
     with torch.no_grad():
         total = 0
@@ -173,11 +242,23 @@ def main():
             x_batch, labels = x_batch.to(device), labels.to(device)
             x_batch = torch.unsqueeze(x_batch, 1)
 
-            x_batch = x_batch.float()
-            # labels = labels.float()
+            x_batch = x_batch.float() # batchsize x 30x30x30
+            labels = labels.float() # batchsize x 300
 
-            pred = voxCNN(x_batch)
-            _, predicted = torch.max(pred.data, 1)
+            output = voxCNN(x_batch) #batchsize x 300
+
+            for j in range(batch_dim):
+                minloss = 100000
+                for i in range(10):
+                    currentLabel = glove[i] #should be size 300 tensor
+                    loss = loss_glove(output[j], currentLabel)
+                    if loss < minloss:
+                        minloss = loss
+                        batch_pred[j] = i
+
+            #batch_pred should now be of size batch_size x 1, with the highest likelihood label for each model
+
+            _, predicted = torch.max(batch_pred.data, 1)
 
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
@@ -192,6 +273,7 @@ def main():
 
     print("Test Error:", test_error)
     print("Test Accuracy: {} %".format(100 * correct / total))
+
 
     # Plot Predictions vs. Labels
 
@@ -223,10 +305,6 @@ def main():
     plt.xlabel('Models')
     plt.ylabel('Object Class')
     plt.show()
-
-    # Obtain Semantic Embeddings----------------------------------------------------------------------------------------------
-
-    # GCN---------------------------------------------------------------------------------------------------------------------
 
     return 0
 

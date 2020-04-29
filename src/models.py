@@ -33,29 +33,54 @@ class CNN(nn.Module):
         self.ConvModel = nn.Sequential(
             # inchannel, outchannel, kernelSize, stride, padding
             nn.Conv3d(1, 8, (3, 3, 3), stride=(1, 1, 1), padding=0),
-            nn.ELU(),
+            nn.LeakyReLU(),
             # Expects a 5d input (batchSize, numChannels, Depth, Height, Width). Arg is numChannels.
             nn.BatchNorm3d(8),
             nn.Conv3d(8, 16, (3, 3, 3), stride=(
                 2, 2, 2), padding=1),  # Layer 2
-            nn.ELU(),
+            nn.LeakyReLU(),
             nn.BatchNorm3d(16),
             nn.Conv3d(16, 32, (3, 3, 3), stride=(
                 1, 1, 1), padding=0),  # Layer 3
-            nn.ELU(),
+            nn.LeakyReLU(),
             nn.BatchNorm3d(32),
             nn.Conv3d(32, 64, (3, 3, 3), stride=(
                 2, 2, 2), padding=1),  # Layer 4
-            nn.ELU(),
+            nn.LeakyReLU(),
             nn.BatchNorm3d(64)
             # nn.Linear((7,7,7), 343), #Layer 5 - Input: (batchSize, channels=64, 7,7,7), Output: (batchSize, channels=64, 343)
             # nn.Linear(6, 10), #Layer 5 - Input: (batchSize, channels=64, 7,7,7), Output: (batchSize, channels=64, 343)
             # nn.ELU(),
             # nn.BatchNorm1d(10) #Expects a 3d input (batchSize, numChannels=64, 343)
         )
+        
+        #Input 30
+        self.ConvModel2 = nn.Sequential(
+            nn.Conv3d(1, 8, (3,3,3), stride=(1,1,1), padding=1), #Output 30
+            nn.LeakyReLU(),
+            nn.BatchNorm3d(8),
+            nn.Conv3d(8, 16, (3,3,3), stride=(1,1,1), padding=1), #Output 30
+            nn.LeakyReLU(),
+            nn.BatchNorm3d(16),
+            nn.Conv3d(16, 32, (2,2,2), stride=(2,2,2), padding=0), #Output 15
+            nn.LeakyReLU(),
+            nn.BatchNorm3d(32)
+            #nn.Conv3d(32, 32, (3,3,3), stride=(2,2,2), padding=0), #Output 7
+            #nn.LeakyReLU(),
+            #nn.BatchNorm3d(32),
+            #nn.Conv3d(32, 64, (3,3,3), stride=(2,2,2), padding=0), 
+            #nn.LeakyReLU(.1),
+            #nn.BatchNorm3d(64),
+            #nn.Conv3d(64, 128, (3,3,3), stride=(1,1,1), padding=1), 
+            #nn.LeakyReLU(.1),
+            #nn.Dropout(p=0.2),
+            #nn.BatchNorm3d(128)
+        )
 
         #self.conv1 = nn.Conv3d(1, 1, 6, stride=3,padding=0)
         self.act1 = nn.LeakyReLU(0.1)
+        self.act2 = nn.Sigmoid()
+        self.drop = nn.Dropout(p=0.2)
 
     def forward(self, x):
 
@@ -68,20 +93,25 @@ class CNN(nn.Module):
         #out3 = self.fc1(out2)
         #out4 = self.act1(out3)
 
-        self.fc1 = nn.Linear(64*6*6*6, 2048)
-        self.fc2 = nn.Linear(2048, 10)
+        self.fc1 = nn.Linear(64*6*6*6, 5000)
+        self.fc2 = nn.Linear(5000, 1000)
+        #self.fc3 = nn.Linear(1000, 10)
+        self.fc3 = nn.Linear(1000, 300)
 
+        print("CNN BEGIN")
         out1 = self.ConvModel(x)
-        # print(out1.shape)
-        # out2 = torch.flatten(out1, 0, -1)
+        print("CNN FINISH")
         out2 = out1.reshape(x.size(0), -1)
         out3 = self.fc1(out2)
-        out3 = self.fc2(out3)
-        # out3 = out3.detach().numpy().dot(self.glove.T)
-        # print(out3.shape)
         out4 = self.act1(out3)
+        out5 = self.drop(out4)
+        out6 = self.fc2(out5)
+        out7 = self.act1(out6)
+        out8 = self.drop(out7)
+        out9 = self.fc3(out8)
+        print("FC Layers Run")
 
-        return out4
+        return out9
 
 
 class GNN(nn.Module):
