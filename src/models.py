@@ -7,6 +7,8 @@ import torch.nn.functional as F
 from torch import nn
 from torch.nn import Linear
 import torch_geometric.nn as GCN
+import scipy.io
+
 
 class CNN(nn.Module):
     def __init__(self, batch_dim):
@@ -20,52 +22,67 @@ class CNN(nn.Module):
         self.batch_dim = batch_dim
         latent_dim = 100
 
+        set_idx = np.int16([1, 2, 8, 12, 14, 22, 23, 30, 33, 35])
+        glovevector = scipy.io.loadmat('../data/ModelNet40_glove')
+        glove_set = glovevector['word']
+        self.glove = glove_set[set_idx, :]
+
         #n_out = (n_in + 2*padding - filter)/stride + 1
 
         # Main throughput is be a 5d tensor - (batchSize, numChannels, Depth, Height, Width)
         self.ConvModel = nn.Sequential(
-            nn.Conv3d(1, 8, (3,3,3), stride=(1,1,1),padding=0), #inchannel, outchannel, kernelSize, stride, padding
+            # inchannel, outchannel, kernelSize, stride, padding
+            nn.Conv3d(1, 8, (3, 3, 3), stride=(1, 1, 1), padding=0),
             nn.ELU(),
-            nn.BatchNorm3d(8), #Expects a 5d input (batchSize, numChannels, Depth, Height, Width). Arg is numChannels.
-            nn.Conv3d(8, 16, (3,3,3), stride=(2,2,2),padding=1), #Layer 2
+            # Expects a 5d input (batchSize, numChannels, Depth, Height, Width). Arg is numChannels.
+            nn.BatchNorm3d(8),
+            nn.Conv3d(8, 16, (3, 3, 3), stride=(
+                2, 2, 2), padding=1),  # Layer 2
             nn.ELU(),
             nn.BatchNorm3d(16),
-            nn.Conv3d(16, 32, (3,3,3), stride=(1,1,1),padding=0), #Layer 3
+            nn.Conv3d(16, 32, (3, 3, 3), stride=(
+                1, 1, 1), padding=0),  # Layer 3
             nn.ELU(),
             nn.BatchNorm3d(32),
-            nn.Conv3d(32, 64, (3,3,3), stride=(2,2,2),padding=1), #Layer 4
+            nn.Conv3d(32, 64, (3, 3, 3), stride=(
+                2, 2, 2), padding=1),  # Layer 4
             nn.ELU(),
             nn.BatchNorm3d(64)
-            #nn.Linear((7,7,7), 343), #Layer 5 - Input: (batchSize, channels=64, 7,7,7), Output: (batchSize, channels=64, 343)
-            #nn.Linear(6, 10), #Layer 5 - Input: (batchSize, channels=64, 7,7,7), Output: (batchSize, channels=64, 343)
-            #nn.ELU(),
-            #nn.BatchNorm1d(10) #Expects a 3d input (batchSize, numChannels=64, 343)
+            # nn.Linear((7,7,7), 343), #Layer 5 - Input: (batchSize, channels=64, 7,7,7), Output: (batchSize, channels=64, 343)
+            # nn.Linear(6, 10), #Layer 5 - Input: (batchSize, channels=64, 7,7,7), Output: (batchSize, channels=64, 343)
+            # nn.ELU(),
+            # nn.BatchNorm1d(10) #Expects a 3d input (batchSize, numChannels=64, 343)
         )
 
         #self.conv1 = nn.Conv3d(1, 1, 6, stride=3,padding=0)
         self.act1 = nn.LeakyReLU(0.1)
-
 
     def forward(self, x):
 
         #self.fc1 = nn.Linear(729*x.shape[0], x.shape[0])
 
         #out1 = self.conv1(x)
-        #print(out1.shape)
+        # print(out1.shape)
         #out2 = torch.flatten(out1, 0, -1)
-        #print(out2.shape)
+        # print(out2.shape)
         #out3 = self.fc1(out2)
         #out4 = self.act1(out3)
 
-        self.fc1 = nn.Linear(64*6*6*6*x.shape[0], x.shape[0])
+        self.fc1 = nn.Linear(64*6*6*6, 2048)
+        self.fc2 = nn.Linear(2048, 10)
 
         out1 = self.ConvModel(x)
-        #print(out1.shape)
-        out2 = torch.flatten(out1, 0, -1)
+        # print(out1.shape)
+        # out2 = torch.flatten(out1, 0, -1)
+        out2 = out1.reshape(x.size(0), -1)
         out3 = self.fc1(out2)
+        out3 = self.fc2(out3)
+        # out3 = out3.detach().numpy().dot(self.glove.T)
+        # print(out3.shape)
         out4 = self.act1(out3)
 
-        return out3
+        return out4
+
 
 class GNN(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
@@ -78,8 +95,6 @@ class GNN(nn.Module):
         self.accuracy = 0
         self.optimizer = None
         self.opt_op = None
-
-
 
     def forward(self, x):
         return 0
