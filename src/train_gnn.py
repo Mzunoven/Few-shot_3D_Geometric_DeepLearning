@@ -124,7 +124,7 @@ def main():
     epochVals = []
     lossVals = []
 
-    print("BEGIN TRAINING")
+    #print("BEGIN TRAINING")
 
     for epoch in range(CNN_epochs):
         for num_batch, (x_batch, labels) in enumerate(trainLoader):
@@ -163,7 +163,7 @@ def main():
 
             loss = loss_glove(CNN_pred, labels)
 
-            #print(loss)
+            print(loss)
             optim.zero_grad()
             loss.backward()
             optim.step()
@@ -178,7 +178,7 @@ def main():
         lossVals = lossVals + [loss]
         # break
 
-    print("FINISH TRAINING")
+    #print("FINISH TRAINING")
 
     plt.figure()
     for i in range(len(epochVals)):
@@ -232,6 +232,7 @@ def main():
     batch_pred = torch.empty(batch_dim)
     x_pred = torch.empty(batch_dim)
     y_labels = torch.empty(batch_dim)
+    correct = 0
 
     glove = torch.from_numpy(voxCNN.get_glove_set())
 
@@ -255,13 +256,16 @@ def main():
                     if loss < minloss:
                         minloss = loss
                         batch_pred[j] = i
+                if minloss < 0.0000005
+                    correct = correct + 1
+
 
             #batch_pred should now be of size batch_size x 1, with the highest likelihood label for each model
 
             _, predicted = torch.max(batch_pred.data, 1)
 
             total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            #correct += (predicted == labels).sum().item()
 
             x_pred = torch.cat((x_pred, predicted.float()), 0)
             y_labels = torch.cat((y_labels, labels.float()), 0)

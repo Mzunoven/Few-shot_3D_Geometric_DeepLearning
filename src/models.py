@@ -98,9 +98,9 @@ class CNN(nn.Module):
         #self.fc3 = nn.Linear(1000, 10)
         self.fc3 = nn.Linear(1000, 300)
 
-        print("CNN BEGIN")
+        #print("CNN BEGIN")
         out1 = self.ConvModel(x)
-        print("CNN FINISH")
+        #print("CNN FINISH")
         out2 = out1.reshape(x.size(0), -1)
         out3 = self.fc1(out2)
         out4 = self.act1(out3)
@@ -109,7 +109,7 @@ class CNN(nn.Module):
         out7 = self.act1(out6)
         out8 = self.drop(out7)
         out9 = self.fc3(out8)
-        print("FC Layers Run")
+        #print("FC Layers Run")
 
         return out9
 
