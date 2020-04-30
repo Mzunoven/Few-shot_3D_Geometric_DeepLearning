@@ -71,7 +71,7 @@ def main():
     batch_dim = 600
     lr = 0.05
     GNN_epochs = 100
-    CNN_epochs = 2
+    CNN_epochs = 100
     latent_dim = 64
 
     # Load data
