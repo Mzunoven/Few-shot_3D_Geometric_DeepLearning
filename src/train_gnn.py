@@ -256,7 +256,7 @@ def main():
                     if loss < minloss:
                         minloss = loss
                         batch_pred[j] = i
-                if minloss < 0.0000005
+                if minloss < 0.0000005:
                     correct = correct + 1
 
 
