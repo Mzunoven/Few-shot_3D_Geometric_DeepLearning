@@ -71,7 +71,7 @@ def main():
     batch_dim = 64
     lr = 0.05
     GNN_epochs = 100
-    CNN_epochs = 100
+    CNN_epochs = 0
     latent_dim = 64
 
     # Load data
@@ -232,9 +232,10 @@ def main():
     batch_pred = torch.empty(batch_dim)
     x_pred = torch.empty(batch_dim)
     y_labels = torch.empty(batch_dim)
+    temp_labels = torch.empty(batch_dim)
     correct = 0
 
-    glove = torch.from_numpy(voxCNN.get_glove_set())
+    glove = torch.from_numpy(testDataSet.get_glove_set())
 
     with torch.no_grad():
         total = 0
@@ -248,31 +249,43 @@ def main():
 
             output = voxCNN(x_batch) #batchsize x 300
 
-            for j in range(batch_dim):
+            batch_pred = torch.empty(batch_dim)
+            temp_labels = torch.empty(batch_dim)
+
+
+            for j in range(output.size(0)):
                 minloss = 100000
                 for i in range(10):
                     currentLabel = glove[i] #should be size 300 tensor
+                    temp_labels[j] = i
                     loss = loss_glove(output[j], currentLabel)
+                    if loss == 0:
+                        temp_labels[j] = i
                     if loss < minloss:
                         minloss = loss
                         batch_pred[j] = i
                 if minloss < 0.0000005:
                     correct = correct + 1
 
+            batch_pred = torch.unsqueeze(batch_pred, 1)
+
+            #print(batch_pred.shape)
 
             #batch_pred should now be of size batch_size x 1, with the highest likelihood label for each model
 
-            _, predicted = torch.max(batch_pred.data, 1)
+            __, predicted = torch.max(batch_pred.data, 1)
+
+            predicted = torch.unsqueeze(predicted, 1)
 
             total += labels.size(0)
             #correct += (predicted == labels).sum().item()
 
-            x_pred = torch.cat((x_pred, predicted.float()), 0)
-            y_labels = torch.cat((y_labels, labels.float()), 0)
+            x_pred = torch.cat((batch_pred, predicted.float()), 0)
+            y_labels = torch.cat((y_labels, temp_labels.float()), 0)
 
             # print(n_batch)
 
-            test_error += loss_func(pred, labels).item()
+            test_error += loss_glove(output, labels).item()
             # break
 
     print("Test Error:", test_error)
