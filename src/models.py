@@ -1,7 +1,7 @@
 import numpy as np
 #import pandas as pd
 import matplotlib.pyplot as plt
-from rdkit import Chem
+#from rdkit import Chem
 import torch
 import torch.nn.functional as F
 from torch import nn
