@@ -68,7 +68,7 @@ def main():
     device = 'cpu'
 
     # Set hyperparameters
-    batch_dim = 600
+    batch_dim = 64
     lr = 0.05
     GNN_epochs = 100
     CNN_epochs = 100
