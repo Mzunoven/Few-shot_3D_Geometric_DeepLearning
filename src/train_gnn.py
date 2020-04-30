@@ -71,7 +71,7 @@ def main():
     batch_dim = 64
     lr = 0.05
     GNN_epochs = 100
-    CNN_epochs = 0
+    CNN_epochs = 3
     latent_dim = 64
 
     # Load data
@@ -83,16 +83,14 @@ def main():
     testDataSet = testData()
     testLoader = DataLoader(dataset=testDataSet,
                             batch_size=batch_dim, shuffle=True, num_workers=0)
-
-
-    #Semantic Embeddings
+    # Semantic Embeddings
     set_idx = np.int16([1, 2, 8, 12, 14, 22, 23, 30, 33, 35])
     glovevector = scipy.io.loadmat('../data/ModelNet40_glove')
     glove_set = glovevector['word']
-    glove = glove_set[set_idx, :] #Is a 10 x 300 ndarray
-    #print(type(glove))
-    #print(glove)
-    #print(glove.shape)
+    glove = glove_set[set_idx, :]  # Is a 10 x 300 ndarray
+    # print(type(glove))
+    # print(glove)
+    # print(glove.shape)
 
     # We must first use a pre-trained CNN to obtain data to be used for the GCN and semantic embeddings.
     # The paper we are referencing supports the use of 'res50' or 'inception' networks. However, these are for 2d images.
@@ -133,7 +131,7 @@ def main():
             # labels is of dim batch_size
             # unsqueeze to make it batch_size, numchannels, x, y, z
 
-            #print(labels.shape) #glovedata is of shape batchsize x 300
+            # print(labels.shape) #glovedata is of shape batchsize x 300
 
             x_batch = torch.unsqueeze(x_batch, 1)
             x_batch, labels = x_batch.to(device), labels.to(device)
@@ -141,21 +139,20 @@ def main():
             # labels = one_hot_encoding(labels)
             #labels = labels.long()
 
-            #print(x_batch.shape)
-            #print(labels.shape)
-
+            # print(x_batch.shape)
+            # print(labels.shape)
 
             # should return a (batch_size, ) tensor to compare w/ labels
             CNN_pred = voxCNN(x_batch)
 
-            #print(CNN_pred.shape)
-            #print(labels.shape)
+            # print(CNN_pred.shape)
+            # print(labels.shape)
 
-            #print(labels)
+            # print(labels)
 
-            #print(CNN_pred.dtype)
-            #print(labels.dtype)
-            #print(CNN_pred[0])
+            # print(CNN_pred.dtype)
+            # print(labels.dtype)
+            # print(CNN_pred[0])
 
             #loss = loss_func(CNN_pred, labels)
 
@@ -163,19 +160,19 @@ def main():
 
             loss = loss_glove(CNN_pred, labels)
 
-            print(loss)
+            # print(loss)
             optim.zero_grad()
             loss.backward()
             optim.step()
             # break
 
-            print("Batch ",num_batch)
-            if (num_batch + 1) % 16 == 0:
+            # print("Batch ", num_batch)
+            if (num_batch + 1) % 20 == 0:
                 # print(CNN_pred)
                 print("Epoch: [{}/{}], Batch: {}, Loss: {}".format(epoch +
                                                                    1, CNN_epochs, num_batch+1, loss.item()))
-        epochVals = epochVals + [epoch]
-        lossVals = lossVals + [loss]
+            epochVals = epochVals + [num_batch + 63*epoch]
+            lossVals = lossVals + [loss.item()]
         # break
 
     #print("FINISH TRAINING")
@@ -222,7 +219,7 @@ def main():
     # print("Test Error:", test_error)
     # print("Test Accuracy: {} %".format(100 * correct / total))
 
-    #Test model with Glove Data
+    # Test model with Glove Data
 
     print("BEGIN TESTING")
 
@@ -233,55 +230,63 @@ def main():
     x_pred = torch.empty(batch_dim)
     y_labels = torch.empty(batch_dim)
     temp_labels = torch.empty(batch_dim)
-    correct = 0
 
     glove = torch.from_numpy(testDataSet.get_glove_set())
 
     with torch.no_grad():
         total = 0
         correct = 0
-        for n_batch, (x_batch, labels) in enumerate(testLoader):
+        for n_batch, (x_batch, labels, true_label) in enumerate(testLoader):
             x_batch, labels = x_batch.to(device), labels.to(device)
             x_batch = torch.unsqueeze(x_batch, 1)
+            # print(true_label.shape)
 
-            x_batch = x_batch.float() # batchsize x 30x30x30
-            labels = labels.float() # batchsize x 300
+            x_batch = x_batch.float()  # batchsize x 30x30x30
+            # labels = labels.float()  # batchsize x 300
 
-            output = voxCNN(x_batch) #batchsize x 300
+            output = voxCNN(x_batch)  # batchsize x 300
+            # output = torch.from_numpy(np.dot(output, glove.T))
+            # print(output.shape)
+            # print(labels.shape)
 
-            batch_pred = torch.empty(batch_dim)
+            batch_pred = torch.empty(output.size(0))
+            # print(batch_pred.shape)
             temp_labels = torch.empty(batch_dim)
-
 
             for j in range(output.size(0)):
                 minloss = 100000
                 for i in range(10):
-                    currentLabel = glove[i] #should be size 300 tensor
-                    temp_labels[j] = i
+                    currentLabel = glove[i]  # should be size 300 tensor
+                    # temp_labels[j] = i
                     loss = loss_glove(output[j], currentLabel)
                     if loss == 0:
                         temp_labels[j] = i
                     if loss < minloss:
                         minloss = loss
                         batch_pred[j] = i
-                if minloss < 0.0000005:
-                    correct = correct + 1
+                # if minloss < 0.005:
+                #     correct = correct + 1
 
-            batch_pred = torch.unsqueeze(batch_pred, 1)
+            # batch_pred = torch.unsqueeze(batch_pred, 1)
 
-            #print(batch_pred.shape)
+            # print(batch_pred)
 
-            #batch_pred should now be of size batch_size x 1, with the highest likelihood label for each model
+            # batch_pred should now be of size batch_size x 1, with the highest likelihood label for each model
 
-            __, predicted = torch.max(batch_pred.data, 1)
+            _, predicted = torch.max(output.data, 1)
 
             predicted = torch.unsqueeze(predicted, 1)
 
-            total += labels.size(0)
-            #correct += (predicted == labels).sum().item()
+            # print(predicted.shape)
 
-            x_pred = torch.cat((batch_pred, predicted.float()), 0)
-            y_labels = torch.cat((y_labels, temp_labels.float()), 0)
+            total += labels.size(0)
+            correct += (batch_pred == true_label).sum().item()
+
+            x_pred = torch.cat((x_pred, batch_pred.float()), 0)
+            y_labels = torch.cat((y_labels, true_label.float()), 0)
+
+            # print(x_pred.shape)
+            # print(y_labels.shape)
 
             # print(n_batch)
 
@@ -290,18 +295,22 @@ def main():
 
     print("Test Error:", test_error)
     print("Test Accuracy: {} %".format(100 * correct / total))
-
+    # 10.90308370044053 %
 
     # Plot Predictions vs. Labels
 
     x_pred = torch.unsqueeze(x_pred, 1)
     y_labels = torch.unsqueeze(y_labels, 1)
 
-    xydata = torch.cat((x_pred, y_labels), 1)
+    # print(x_pred)
+
+    # xydata = torch.cat((x_pred, y_labels), 1)
 
     sortedlabels, indices = torch.sort(y_labels, 0)
 
     indices = torch.squeeze(indices)
+
+    # print(indices.shape)
 
     sortedX = torch.index_select(x_pred, 0, indices)
 

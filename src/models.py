@@ -53,28 +53,31 @@ class CNN(nn.Module):
             # nn.ELU(),
             # nn.BatchNorm1d(10) #Expects a 3d input (batchSize, numChannels=64, 343)
         )
-        
-        #Input 30
+
+        # Input 30
         self.ConvModel2 = nn.Sequential(
-            nn.Conv3d(1, 8, (3,3,3), stride=(1,1,1), padding=1), #Output 30
+            nn.Conv3d(1, 8, (3, 3, 3), stride=(
+                1, 1, 1), padding=1),  # Output 30
             nn.LeakyReLU(),
             nn.BatchNorm3d(8),
-            nn.Conv3d(8, 16, (3,3,3), stride=(1,1,1), padding=1), #Output 30
+            nn.Conv3d(8, 16, (3, 3, 3), stride=(
+                1, 1, 1), padding=1),  # Output 30
             nn.LeakyReLU(),
             nn.BatchNorm3d(16),
-            nn.Conv3d(16, 32, (2,2,2), stride=(2,2,2), padding=0), #Output 15
+            nn.Conv3d(16, 32, (2, 2, 2), stride=(
+                2, 2, 2), padding=0),  # Output 15
             nn.LeakyReLU(),
             nn.BatchNorm3d(32)
-            #nn.Conv3d(32, 32, (3,3,3), stride=(2,2,2), padding=0), #Output 7
-            #nn.LeakyReLU(),
-            #nn.BatchNorm3d(32),
-            #nn.Conv3d(32, 64, (3,3,3), stride=(2,2,2), padding=0), 
-            #nn.LeakyReLU(.1),
-            #nn.BatchNorm3d(64),
-            #nn.Conv3d(64, 128, (3,3,3), stride=(1,1,1), padding=1), 
-            #nn.LeakyReLU(.1),
-            #nn.Dropout(p=0.2),
-            #nn.BatchNorm3d(128)
+            # nn.Conv3d(32, 32, (3,3,3), stride=(2,2,2), padding=0), #Output 7
+            # nn.LeakyReLU(),
+            # nn.BatchNorm3d(32),
+            #nn.Conv3d(32, 64, (3,3,3), stride=(2,2,2), padding=0),
+            # nn.LeakyReLU(.1),
+            # nn.BatchNorm3d(64),
+            #nn.Conv3d(64, 128, (3,3,3), stride=(1,1,1), padding=1),
+            # nn.LeakyReLU(.1),
+            # nn.Dropout(p=0.2),
+            # nn.BatchNorm3d(128)
         )
 
         #self.conv1 = nn.Conv3d(1, 1, 6, stride=3,padding=0)

@@ -4,6 +4,7 @@ import numpy as np
 from torch.utils.data import Dataset
 import scipy.io
 
+
 class trainData(Dataset):
     def __init__(self):
         super(trainData, self).__init__()
@@ -21,13 +22,13 @@ class trainData(Dataset):
         # x arrays are 30x30x30 binary grids of either 0s or 1s, indicating the presence of a voxel in that given space.
         # Each voxel could be contained in a 24x24x24 cube. The additional space serves as padding.
 
-        #Semantic Embeddings
+        # Semantic Embeddings
         set_idx = np.int16([1, 2, 8, 12, 14, 22, 23, 30, 33, 35])
         glovevector = scipy.io.loadmat('../data/ModelNet40_glove')
         glove_set = glovevector['word']
-        self.glove = glove_set[set_idx, :] #Is a 10 x 300 ndarray
+        self.glove = glove_set[set_idx, :]  # Is a 10 x 300 ndarray
 
-        gloveLabels = np.empty((len(yTrain),300))
+        gloveLabels = np.empty((len(yTrain), 300))
 
         for i in range(len(yTrain)):
             idx = yTrain[i]
@@ -35,7 +36,8 @@ class trainData(Dataset):
 
         self.xData = xTrain
         #self.yData = yTrain
-        self.yData = gloveLabels #Should be a 908, 300 array, with each label corresponding to a 300 long vector
+        # Should be a 908, 300 array, with each label corresponding to a 300 long vector
+        self.yData = gloveLabels
 
     def get_glove_set(self):
         return self.glove
@@ -68,13 +70,13 @@ class testData(Dataset):
         # x arrays are 30x30x30 binary grids of either 0s or 1s, indicating the presence of a voxel in that given space.
         # Each voxel could be contained in a 24x24x24 cube. The additional space serves as padding.
 
-        #Semantic Embeddings
+        # Semantic Embeddings
         set_idx = np.int16([1, 2, 8, 12, 14, 22, 23, 30, 33, 35])
         glovevector = scipy.io.loadmat('../data/ModelNet40_glove')
         glove_set = glovevector['word']
-        self.glove = glove_set[set_idx, :] #Is a 10 x 300 ndarray
+        self.glove = glove_set[set_idx, :]  # Is a 10 x 300 ndarray
 
-        gloveLabels = np.empty((len(yTest),300))
+        gloveLabels = np.empty((len(yTest), 300))
 
         for i in range(len(yTest)):
             idx = yTest[i]
@@ -82,7 +84,9 @@ class testData(Dataset):
 
         self.xData = xTest
         #self.yData = yTest
-        self.yData = gloveLabels #Should be a 908, 300 array, with each label corresponding to a 300 long vector
+        # Should be a 908, 300 array, with each label corresponding to a 300 long vector
+        self.yData = gloveLabels
+        self.yTest = yTest
 
     def get_glove_set(self):
         return self.glove
@@ -91,7 +95,7 @@ class testData(Dataset):
         return self.yData
 
     def __getitem__(self, idx):
-        return self.xData[idx], self.yData[idx]
+        return self.xData[idx], self.yData[idx], self.yTest[idx]
 
     def __len__(self):
         return len(self.yData)
